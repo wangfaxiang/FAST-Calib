@@ -14,8 +14,7 @@ which is included as part of this source code package.
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/common/transforms.h>
-#include <pcl_ros/point_cloud.h>
-#include <pcl_ros/filters/passthrough.h>
+#include <pcl/filters/passthrough.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/features/boundary.h>
@@ -26,7 +25,7 @@ which is included as part of this source code package.
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <cmath>
 #include <opencv2/opencv.hpp>
-#include <tf/tf.h>
+#include <rclcpp/rclcpp.hpp>
 #include "color.h"
 
 using namespace std;
@@ -68,33 +67,58 @@ struct Params {
 };
 
 // 读取参数
-Params loadParameters(ros::NodeHandle &nh) {
+Params loadParameters(rclcpp::Node::SharedPtr nh) {
   Params params;
-  nh.param("fx", params.fx, 1215.31801774424);
-  nh.param("fy", params.fy, 1214.72961288138);
-  nh.param("cx", params.cx, 1047.86571859677);
-  nh.param("cy", params.cy, 745.068353101898);
-  nh.param("k1", params.k1, -0.33574781188503);
-  nh.param("k2", params.k2, 0.10996870793601);
-  nh.param("p1", params.p1, 0.000157303079833973);
-  nh.param("p2", params.p2, 0.000544930726278493);
-  nh.param("marker_size", params.marker_size, 0.2);
-  nh.param("delta_width_qr_center", params.delta_width_qr_center, 0.55);
-  nh.param("delta_height_qr_center", params.delta_height_qr_center, 0.35);
-  nh.param("delta_width_circles", params.delta_width_circles, 0.5);
-  nh.param("delta_height_circles", params.delta_height_circles, 0.4);
-  nh.param("min_detected_markers", params.min_detected_markers, 3);
-  nh.param("circle_radius", params.circle_radius, 0.12);
-  nh.param("image_path", params.image_path, string("/home/chunran/calib_ws/src/fast_calib/data/image.png"));
-  nh.param("bag_path", params.bag_path, string("/home/chunran/calib_ws/src/fast_calib/data/input.bag"));
-  nh.param("lidar_topic", params.lidar_topic, string("/livox/lidar"));
-  nh.param("output_path", params.output_path, string("/home/chunran/calib_ws/src/fast_calib/output"));
-  nh.param("x_min", params.x_min, 1.5);
-  nh.param("x_max", params.x_max, 3.0);
-  nh.param("y_min", params.y_min, -1.5);
-  nh.param("y_max", params.y_max, 2.0);
-  nh.param("z_min", params.z_min, -0.5);
-  nh.param("z_max", params.z_max, 2.0);
+  nh->declare_parameter<double>("fx", 1215.31801774424);
+  nh->get_parameter("fx", params.fx);
+  nh->declare_parameter<double>("fy", 1214.72961288138);
+  nh->get_parameter("fy", params.fy);
+  nh->declare_parameter<double>("cx", 1047.86571859677);
+  nh->get_parameter("cx", params.cx);
+  nh->declare_parameter<double>("cy", 745.068353101898);
+  nh->get_parameter("cy", params.cy);
+  nh->declare_parameter<double>("k1", -0.33574781188503);
+  nh->get_parameter("k1", params.k1);
+  nh->declare_parameter<double>("k2", 0.10996870793601);
+  nh->get_parameter("k2", params.k2);
+  nh->declare_parameter<double>("p1", 0.000157303079833973);
+  nh->get_parameter("p1", params.p1);
+  nh->declare_parameter<double>("p2", 0.000544930726278493);
+  nh->get_parameter("p2", params.p2);
+  nh->declare_parameter<double>("marker_size", 0.2);
+  nh->get_parameter("marker_size", params.marker_size);
+  nh->declare_parameter<double>("delta_width_qr_center", 0.55);
+  nh->get_parameter("delta_width_qr_center", params.delta_width_qr_center);
+  nh->declare_parameter<double>("delta_height_qr_center", 0.35);
+  nh->get_parameter("delta_height_qr_center", params.delta_height_qr_center);
+  nh->declare_parameter<double>("delta_width_circles", 0.5);
+  nh->get_parameter("delta_width_circles", params.delta_width_circles);
+  nh->declare_parameter<double>("delta_height_circles", 0.4);
+  nh->get_parameter("delta_height_circles", params.delta_height_circles);
+  nh->declare_parameter<int>("min_detected_markers", 3);
+  nh->get_parameter("min_detected_markers", params.min_detected_markers);
+  nh->declare_parameter<double>("circle_radius", 0.12);
+  nh->get_parameter("circle_radius", params.circle_radius);
+  nh->declare_parameter<std::string>("image_path", "/home/chunran/calib_ws/src/fast_calib/data/image.png");
+  nh->get_parameter("image_path", params.image_path);
+  nh->declare_parameter<std::string>("bag_path", "/home/chunran/calib_ws/src/fast_calib/data/input.bag");
+  nh->get_parameter("bag_path", params.bag_path);
+  nh->declare_parameter<std::string>("lidar_topic", "/livox/lidar");
+  nh->get_parameter("lidar_topic", params.lidar_topic);
+  nh->declare_parameter<std::string>("output_path", "/home/chunran/calib_ws/src/fast_calib/output");
+  nh->get_parameter("output_path", params.output_path);
+  nh->declare_parameter<double>("x_min", 1.5);
+  nh->get_parameter("x_min", params.x_min);
+  nh->declare_parameter<double>("x_max", 3.0);
+  nh->get_parameter("x_max", params.x_max);
+  nh->declare_parameter<double>("y_min", -1.5);
+  nh->get_parameter("y_min", params.y_min);
+  nh->declare_parameter<double>("y_max", 2.0);
+  nh->get_parameter("y_max", params.y_max);
+  nh->declare_parameter<double>("z_min", -0.5);
+  nh->get_parameter("z_min", params.z_min);
+  nh->declare_parameter<double>("z_max", 2.0);
+  nh->get_parameter("z_max", params.z_max);
   return params;
 }
 

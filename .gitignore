@@ -1,3 +1,15 @@
 calib_data/*
 output/*
 build/*
+install/*
+log/*
+
+# VS Code C/C++ IntelliSense 数据库（cpptools 生成的大文件）
+.vscode/browse.vc.db
+.vscode/browse.vc.db-shm
+.vscode/browse.vc.db-wal
+.vscode/browse.vc.db.lock
+
+# Python 字节码缓存
+__pycache__/
+*.pyc

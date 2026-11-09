@@ -7,11 +7,8 @@ which is included as part of this source code package.
 
 #ifndef QR_DETECT_HPP
 #define QR_DETECT_HPP
-#include <cv_bridge/cv_bridge.h>
-#include <image_geometry/pinhole_camera_model.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <opencv2/aruco.hpp>
 #include "common_lib.h"
 
@@ -22,14 +19,16 @@ class QRDetect
     double delta_width_circles_, delta_height_circles_;
     int min_detected_markers_;
     cv::Ptr<cv::aruco::Dictionary> dictionary_;
+    rclcpp::Logger logger_;
   
   public:
-    ros::Publisher qr_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr qr_pub_;
     cv::Mat imageCopy_;
     cv::Mat cameraMatrix_;
     cv::Mat distCoeffs_;
 
-    QRDetect(ros::NodeHandle &nh, Params& params) 
+    QRDetect(rclcpp::Node::SharedPtr nh, Params& params)
+      : logger_(nh->get_logger())
     {
       marker_size_ = params.marker_size;
       delta_width_qr_center_ = params.delta_width_qr_center;
@@ -49,7 +48,7 @@ class QRDetect
       // Initialize QR dictionary
       dictionary_ = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
 
-      qr_pub_ = nh.advertise<sensor_msgs::PointCloud2>("qr_cloud", 1);
+      qr_pub_ = nh->create_publisher<sensor_msgs::msg::PointCloud2>("qr_cloud", 1);
     }
 
     Point2f projectPointDist(cv::Point3f pt_cv, const Mat intrinsics, const Mat distCoeffs) 
@@ -317,7 +316,7 @@ class QRDetect
         {
           if (best_candidate_score == 1 && groups_scores[i] == 1) {
             // Exit 4: Several candidates fit target's geometry
-            ROS_ERROR(
+            RCLCPP_ERROR(logger_,
                 "[Mono] More than one set of candidates fit target's geometry. "
                 "Please, make sure your parameters are well set. Exiting callback");
             return;
@@ -331,7 +330,7 @@ class QRDetect
         if (best_candidate_idx == -1) 
         {
           // Exit: No candidates fit target's geometry
-          ROS_WARN(
+          RCLCPP_WARN(logger_,
               "[Mono] Unable to find a candidate set that matches target's "
               "geometry");
           return;
@@ -357,7 +356,7 @@ class QRDetect
       else 
       {
         // Markers found != TARGET_NUM_CIRCLES
-        ROS_WARN("%lu marker(s) found, %d expected. Skipping frame...", ids.size(),
+        RCLCPP_WARN(logger_, "%lu marker(s) found, %d expected. Skipping frame...", ids.size(),
                 TARGET_NUM_CIRCLES);
       }
     }

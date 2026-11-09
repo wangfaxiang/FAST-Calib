@@ -79,8 +79,6 @@
 
 # Input
   lidar_topic: "/livox/lidar" # /ouster/points /livox/lidar
-  bag_path: "$(find fast_calib)/calib_data/avia_multi_scene/33.bag"
-  image_path: "$(find fast_calib)/calib_data/avia_multi_scene/33.jpg"
 
-# Output
-  output_path: "$(find fast_calib)/output"
+# bag_path / image_path / output_path 由 launch 文件动态提供
+# （ROS2 参数文件不支持 $(find ...) 替换）
