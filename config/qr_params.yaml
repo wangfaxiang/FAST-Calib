@@ -1,5 +1,7 @@
-# Camera intrinsics  
-  # mid360
+fast_calib:
+  ros__parameters:
+    # Camera intrinsics
+    # mid360
   # fx: 843.501050605967
   # fy: 845.199690011973
   # cx: 321.017429415352
@@ -30,22 +32,22 @@
   # p2: -0.000201478932371979
 
   # multi-scene
-  fx: 2478.48702288166
-  fy: 2478.58544825456
-  cx: 1230.99707596681
-  cy: 1025.66149498072
-  k1: -0.0493178189623200
-  k2: 0.147394487986097
-  p1: -0.00127118592043482
-  p2: -0.00200379689523022
+    fx: 2478.48702288166
+    fy: 2478.58544825456
+    cx: 1230.99707596681
+    cy: 1025.66149498072
+    k1: -0.0493178189623200
+    k2: 0.147394487986097
+    p1: -0.00127118592043482
+    p2: -0.00200379689523022
 
 # Calibration target parameters
-  marker_size: 0.20 # ArUco marker size (our test data uses 0.16m; adjust to match your marker size)
-  delta_width_qr_center: 0.55 # Half the distance between the centers of two markers in the horizontal direction 
-  delta_height_qr_center: 0.35 # Half the distance between the centers of two markers in the vertical direction
-  delta_width_circles: 0.5 # Distance between the centers of two circles in the horizontal direction
-  delta_height_circles: 0.4 # Distance between the centers of two circles in the vertical direction
-  circle_radius: 0.12 # Radius of the circle 
+    marker_size: 0.20 # ArUco marker size (our test data uses 0.16m; adjust to match your marker size)
+    delta_width_qr_center: 0.55 # Half the distance between the centers of two markers in the horizontal direction
+    delta_height_qr_center: 0.35 # Half the distance between the centers of two markers in the vertical direction
+    delta_width_circles: 0.5 # Distance between the centers of two circles in the horizontal direction
+    delta_height_circles: 0.4 # Distance between the centers of two circles in the vertical direction
+    circle_radius: 0.12 # Radius of the circle
 
 # Distance filter
   # x_min: 3.0 # avia and mid360: 2.0 ouster: 1.5
@@ -70,15 +72,15 @@
   # z_min: 0.0
   # z_max: 2.0
 # multi_scene_33
-  x_min: 2.0
-  x_max: 5.0
-  y_min: -1.0
-  y_max: 4.0
-  z_min: 0.0
-  z_max: 2.0
+    x_min: 2.0
+    x_max: 5.0
+    y_min: -1.0
+    y_max: 4.0
+    z_min: 0.0
+    z_max: 2.0
 
 # Input
-  lidar_topic: "/livox/lidar" # /ouster/points /livox/lidar
+    lidar_topic: "/livox/lidar" # /ouster/points /livox/lidar
 
 # bag_path / image_path / output_path 由 launch 文件动态提供
 # （ROS2 参数文件不支持 $(find ...) 替换）
