@@ -24,6 +24,7 @@ source /opt/ros/galactic/setup.bash
 # 进入项目目录并编译
 cd /path/to/FAST-Calib
 colcon build --symlink-install
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug
 
 # 加载本包环境
 source install/setup.bash

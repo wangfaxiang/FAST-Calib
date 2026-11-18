@@ -13,6 +13,7 @@ which is included as part of this source code package.
 #include <Eigen/Dense>
 #include <rclcpp/rclcpp.hpp>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/io/ply_io.h>
 #include "common_lib.h"
 
 class LidarDetect
@@ -87,6 +88,14 @@ public:
         pass_z.filter(*filtered_cloud_);
 
         RCLCPP_INFO(logger_, "Depth filtered cloud size: %zu", filtered_cloud_->size());
+        RCLCPP_INFO(logger_, "PassThrough ranges: x:[%.3f, %.3f] y:[%.3f, %.3f] z:[%.3f, %.3f]",
+                    x_min_, x_max_, y_min_, y_max_, z_min_, z_max_);
+
+        // 保存过滤前/后点云到本地 pcd（覆盖保存，便于 CloudCompare 打开）
+        // pcl::io::savePCDFileBinary("output/cloud_raw.pcd", *cloud);
+        pcl::io::savePCDFileBinary("output/cloud_filtered.pcd", *filtered_cloud_);
+        RCLCPP_INFO(logger_, "Saved raw(%zu) / filtered(%zu) clouds to output/*.pcd",
+                    cloud->size(), filtered_cloud_->size());
 
         // 2. 拟合平面，提取法向量
         plane_cloud_->reserve(filtered_cloud_->size());
@@ -105,6 +114,9 @@ public:
         extract.setIndices(plane_inliers);
         extract.filter(*plane_cloud_);
         RCLCPP_INFO(logger_, "Plane cloud size: %zu", plane_cloud_->size());
+
+        // 保存平面点云到本地 pcd（覆盖保存，便于 CloudCompare 打开）
+        pcl::io::savePCDFileBinary("output/cloud_plane.pcd", *plane_cloud_);
     
         // 3. 根据每条ring相邻点距离提取边缘点
         edge_cloud_->reserve(filtered_cloud_->size());
@@ -165,6 +177,9 @@ public:
 
         RCLCPP_INFO(logger_, "Extracted %zu edge points (mechanical LiDAR by neighbor distance).", edge_cloud_->size());
 
+        // 保存边缘点到本地 pcd（覆盖保存，便于 CloudCompare 打开）
+        pcl::io::savePCDFileBinary("output/cloud_edge.pcd", *edge_cloud_);
+
         // 4. 将边缘点对齐到 Z=0 平面
         aligned_cloud_->reserve(edge_cloud_->size());
         Eigen::Vector3d z_axis(0, 0, 1);
@@ -185,6 +200,9 @@ public:
         }
         average_z /= cnt;
 
+        // 保存对齐后的点云到本地 pcd（覆盖保存，便于 CloudCompare 打开）
+        pcl::io::savePCDFileBinary("output/cloud_aligned.pcd", *aligned_cloud_);
+
         // 5. 在对齐后的点云中检测圆形，提取圆心
         
         // 拷贝一份工作点云，后面要不停“删掉已拟合的圆”
@@ -204,6 +222,9 @@ public:
         pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
         pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
         pcl::ExtractIndices<pcl::PointXYZ> extract2;
+
+        // 累积所有圆的内点，用于保存/可视化
+        pcl::PointCloud<pcl::PointXYZ>::Ptr circle_inliers_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
         // 不停在剩余点云中找圆
         while (xy_cloud->points.size() > 3)
@@ -246,6 +267,12 @@ public:
             center_point.z = 0;
             center_z0_cloud_->push_back(center_point);
 
+            // 把当前圆的内点累积到总内点点云中
+            for (const auto &idx : inliers->indices)
+            {
+                circle_inliers_cloud->push_back(xy_cloud->points[idx]);
+            }
+
             // 把当前圆的 inliers 从点云中移除，继续在剩余点中找
             extract2.setInputCloud(xy_cloud);
             extract2.setIndices(inliers);
@@ -257,6 +284,11 @@ public:
             // 清空 inliers，避免下一轮残留
             inliers->indices.clear();
         }
+
+        // 保存所有圆的内点到本地 pcd（覆盖保存，便于 CloudCompare 查看）
+        pcl::io::savePCDFileBinary("output/cloud_circle_inliers.pcd", *circle_inliers_cloud);
+        RCLCPP_INFO(logger_, "Saved %zu circle inlier points to output/cloud_circle_inliers.pcd",
+                    circle_inliers_cloud->size());
 
         // 6. Geometric consistency check
         std::vector<std::vector<int>> groups;
@@ -326,6 +358,11 @@ public:
             center_point_origin.z = original_point.z();
             center_cloud->points.push_back(center_point_origin);
         }
+
+        // 保存最终选中的所有圆心到本地 pcd（覆盖保存，便于 CloudCompare 查看）
+        pcl::io::savePCDFileBinary("output/lidar_center_cloud.pcd", *center_cloud);
+        RCLCPP_INFO(logger_, "Saved %zu centers to output/lidar_center_cloud.pcd",
+                    center_cloud->size());
     }
 
     void detect_solid_lidar(pcl::PointCloud<Common::Point>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr center_cloud)
@@ -403,6 +440,9 @@ public:
             cnt++;
         }
         average_z /= cnt;
+
+        // 保存对齐后的点云到本地 pcd（覆盖保存，便于 CloudCompare 打开）
+        pcl::io::savePCDFileBinary("output/cloud_aligned.pcd", *aligned_cloud_);
 
         // 4. 提取边缘点
         edge_cloud_->reserve(aligned_cloud_->size());

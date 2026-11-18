@@ -24,6 +24,8 @@ which is included as part of this source code package.
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <cmath>
+#include <algorithm>
+#include <limits>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include "color.h"
@@ -64,26 +66,27 @@ struct Params {
   string bag_path;
   string lidar_topic;
   string output_path;
+  int num_frames;  // 从 bag 中读取的点云帧数（1 = 只取第一帧，支架抖动时推荐）
 };
 
 // 读取参数
 Params loadParameters(rclcpp::Node::SharedPtr nh) {
   Params params;
-  nh->declare_parameter<double>("fx", 1215.31801774424);
+  nh->declare_parameter<double>("fx", 1387.0);
   nh->get_parameter("fx", params.fx);
-  nh->declare_parameter<double>("fy", 1214.72961288138);
+  nh->declare_parameter<double>("fy", 1389.0);
   nh->get_parameter("fy", params.fy);
-  nh->declare_parameter<double>("cx", 1047.86571859677);
+  nh->declare_parameter<double>("cx", 960.0);
   nh->get_parameter("cx", params.cx);
-  nh->declare_parameter<double>("cy", 745.068353101898);
+  nh->declare_parameter<double>("cy", 540.0);
   nh->get_parameter("cy", params.cy);
-  nh->declare_parameter<double>("k1", -0.33574781188503);
+  nh->declare_parameter<double>("k1", 0.0);
   nh->get_parameter("k1", params.k1);
-  nh->declare_parameter<double>("k2", 0.10996870793601);
+  nh->declare_parameter<double>("k2", 0.0);
   nh->get_parameter("k2", params.k2);
-  nh->declare_parameter<double>("p1", 0.000157303079833973);
+  nh->declare_parameter<double>("p1", 0.0);
   nh->get_parameter("p1", params.p1);
-  nh->declare_parameter<double>("p2", 0.000544930726278493);
+  nh->declare_parameter<double>("p2", 0.0);
   nh->get_parameter("p2", params.p2);
   nh->declare_parameter<double>("marker_size", 0.2);
   nh->get_parameter("marker_size", params.marker_size);
@@ -107,6 +110,8 @@ Params loadParameters(rclcpp::Node::SharedPtr nh) {
   nh->get_parameter("lidar_topic", params.lidar_topic);
   nh->declare_parameter<std::string>("output_path", "/home/chunran/calib_ws/src/fast_calib/output");
   nh->get_parameter("output_path", params.output_path);
+  nh->declare_parameter<int>("num_frames", 1);
+  nh->get_parameter("num_frames", params.num_frames);
   nh->declare_parameter<double>("x_min", 1.5);
   nh->get_parameter("x_min", params.x_min);
   nh->declare_parameter<double>("x_max", 3.0);
@@ -246,6 +251,84 @@ void projectPointCloudToImage(const pcl::PointCloud<Common::Point>::Ptr& cloud,
       colored_cloud->push_back(colored_point);
     }
   }
+}
+
+// 辅助函数：将点云经外参变换后投影到图像并绘制（按深度着色：近红远蓝）
+template <typename PointT>
+static void projectAndDrawCloud(const typename pcl::PointCloud<PointT>::Ptr& cloud,
+                                const Eigen::Matrix4f& transformation,
+                                const cv::Mat& cameraMatrix,
+                                const cv::Mat& distCoeffs,
+                                cv::Mat& overlay,
+                                int radius)
+{
+  if (!cloud || cloud->empty()) return;
+
+  std::vector<cv::Point3f> pts;
+  pts.reserve(cloud->size());
+  float min_z = std::numeric_limits<float>::max();
+  float max_z = std::numeric_limits<float>::lowest();
+  for (const auto& p : *cloud) {
+    Eigen::Vector4f ph(p.x, p.y, p.z, 1.0f);
+    Eigen::Vector4f pc = transformation * ph;
+    if (pc(2) <= 0.0f) continue;  // 跳过相机后方的点
+    pts.push_back(cv::Point3f(pc(0), pc(1), pc(2)));
+    min_z = std::min(min_z, pc(2));
+    max_z = std::max(max_z, pc(2));
+  }
+  if (pts.empty()) return;
+
+  std::vector<cv::Point2f> img_pts;
+  cv::Mat rvec = cv::Mat::zeros(3, 1, CV_32F);
+  cv::Mat tvec = cv::Mat::zeros(3, 1, CV_32F);
+  cv::projectPoints(pts, rvec, tvec, cameraMatrix, distCoeffs, img_pts);
+
+  float range = max_z - min_z;
+  if (range < 1e-6f) range = 1.0f;
+
+  for (size_t i = 0; i < img_pts.size(); ++i) {
+    int u = static_cast<int>(std::lround(img_pts[i].x));
+    int v = static_cast<int>(std::lround(img_pts[i].y));
+    if (u < 0 || u >= overlay.cols || v < 0 || v >= overlay.rows) continue;
+
+    // 深度着色：近 -> 红，远 -> 蓝
+    float t = (pts[i].z - min_z) / range;  // 0=近, 1=远
+    cv::Scalar color(static_cast<double>(255.0f * t), 0.0,
+                     static_cast<double>(255.0f * (1.0f - t)));
+    cv::circle(overlay, cv::Point(u, v), radius, color, -1);
+  }
+}
+
+// 将标定板平面点云（小点）和边界点云（大点）投影到图像上并保存为叠加图
+// 用于直观检查外参对齐效果：外参准确时，投影点应贴合图像中标定板的真实轮廓
+void saveProjectedCloudImage(const pcl::PointCloud<Common::Point>::Ptr& plane_cloud,
+                             const pcl::PointCloud<pcl::PointXYZ>::Ptr& edge_cloud,
+                             const Eigen::Matrix4f& transformation,
+                             const cv::Mat& cameraMatrix,
+                             const cv::Mat& distCoeffs,
+                             const cv::Mat& image,
+                             const std::string& output_path)
+{
+  if (image.empty()) {
+    std::cerr << BOLDRED << "[saveProjectedCloudImage] Empty image." << RESET << std::endl;
+    return;
+  }
+
+  // 统一为 3 通道彩色图
+  cv::Mat overlay;
+  if (image.channels() == 1)
+    cv::cvtColor(image, overlay, cv::COLOR_GRAY2BGR);
+  else
+    image.copyTo(overlay);
+
+  // 平面点：小点
+  projectAndDrawCloud<Common::Point>(plane_cloud, transformation, cameraMatrix, distCoeffs, overlay, 1);
+  // 边界点：大点，便于突出标定板圆孔边缘
+  projectAndDrawCloud<pcl::PointXYZ>(edge_cloud, transformation, cameraMatrix, distCoeffs, overlay, 3);
+
+  cv::imwrite(output_path, overlay);
+  std::cout << BOLDGREEN << "[Result] Saved projected plane/edge cloud overlay to "
+            << BOLDWHITE << output_path << RESET << std::endl;
 }
 
 void saveTargetHoleCenters(const pcl::PointCloud<pcl::PointXYZ>::Ptr& lidar_centers,

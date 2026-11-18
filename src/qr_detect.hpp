@@ -163,8 +163,14 @@ class QRDetect
       std::vector<std::vector<cv::Point2f>> corners;
       cv::aruco::detectMarkers(image, dictionary_, corners, ids, parameters);
 
+      // 保存画 marker 框之前的图像（原始图像副本）
+      cv::imwrite("output/qr_before_draw.png", imageCopy_);
+
       // Draw detections if at least one marker detected
       if (ids.size() > 0) cv::aruco::drawDetectedMarkers(imageCopy_, corners, ids);
+
+      // 保存画 marker 框之后的图像
+      cv::imwrite("output/qr_after_draw1.png", imageCopy_);
 
       cv::Vec3d rvec(0, 0, 0), tvec(0, 0, 0);  // Vectors to store initial guess
       
@@ -200,6 +206,8 @@ class QRDetect
           rvec_cos[1] += cos(rvecs[i][1]);
           rvec_cos[2] += cos(rvecs[i][2]);
         }
+        // 保存画 marker 框之后的图像
+        cv::imwrite("output/qr_after_draw2.png", imageCopy_);
 
         // Compute average pose. Rotation computed as atan2(sin/cos)
         tvec = tvec / int(ids.size());
@@ -227,6 +235,7 @@ class QRDetect
         // cout << "board: " <<  tvec[0] << ", "<< tvec[1] << ", " << tvec[2] << std::endl;
 
         cv::aruco::drawAxis(imageCopy_, cameraMatrix_, distCoeffs_, rvec, tvec, 0.2);
+        cv::imwrite("output/qr_after_draw3.png", imageCopy_);
 
         // Build transformation matrix to calibration target axis
         cv::Mat R(3, 3, cv::DataType<float>::type);
@@ -268,6 +277,7 @@ class QRDetect
           qr_center.z = center3d.z;
           candidates_cloud->push_back(qr_center);
         }
+        cv::imwrite("output/qr_after_circle1.png", imageCopy_);
 
         /**
           NOTE: This is included here in the same way as the rest of the modalities
@@ -349,6 +359,7 @@ class QRDetect
             uv_circle1 = projectPointDist(pt_circle1, cameraMatrix_, distCoeffs_);
             circle(imageCopy_, uv_circle1, 2, Scalar(255, 0, 255), -1);
           }
+          cv::imwrite("output/qr_after_circle2.png", imageCopy_);
         }
 
         // Publish pointcloud messages

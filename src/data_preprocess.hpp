@@ -51,6 +51,7 @@ public:
         string bag_path   = params.bag_path;
         string image_path = params.image_path;
         string lidar_topic = params.lidar_topic;
+        int num_frames = params.num_frames;  // 只累积前 N 帧点云，支架抖动时设为 1
 
         auto logger = rclcpp::get_logger("fast_calib");
 
@@ -102,8 +103,9 @@ public:
         bool is_custom_msg = (lidar_msg_type.find("CustomMsg") != std::string::npos);
         bool is_pc2        = (lidar_msg_type.find("PointCloud2") != std::string::npos);
 
-        // 累计读取
-        while (reader.has_next())
+        // 累计读取（只读前 num_frames 帧；num_frames=1 即单帧）
+        int frame_count = 0;
+        while (reader.has_next() && frame_count < num_frames)
         {
             auto serialized_msg = reader.read_next();
             if (serialized_msg->topic_name != lidar_topic) continue;
@@ -134,6 +136,7 @@ public:
                     p.ring = static_cast<std::uint16_t>(livox_custom_msg.points[i].line);
                     cloud_input_->push_back(p);
                 }
+                ++frame_count;
                 continue;
             }
 
@@ -202,6 +205,7 @@ public:
 
                     cloud_input_->push_back(p);
                 }
+                ++frame_count;
                 continue;
             }
 

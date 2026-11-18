@@ -1,0 +1,85 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "fast_calib (直接调试)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/fast_calib/fast_calib",
+            "args": [
+                "--ros-args",
+                "-r", "__node:=fast_calib",
+                "--params-file", "${workspaceFolder}/config/qr_params.yaml",
+                "-p", "bag_path:=${workspaceFolder}/rosbag2_2026_11_15-/rosbag2_2026_11_15-19_48_40",
+                "-p", "image_path:=${workspaceFolder}/calib_data/avia_multi_scene/33.jpg",
+                "-p", "output_path:=${workspaceFolder}/output"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "environment": [
+                { "name": "ROS_DISTRO", "value": "galactic" },
+                { "name": "ROS_VERSION", "value": "2" },
+                { "name": "ROS_PYTHON_VERSION", "value": "3" },
+                { "name": "RMW_IMPLEMENTATION", "value": "rmw_cyclonedds_cpp" },
+                { "name": "AMENT_PREFIX_PATH", "value": "${workspaceFolder}/install/fast_calib:/opt/ros/galactic" },
+                { "name": "CMAKE_PREFIX_PATH", "value": "${workspaceFolder}/install/fast_calib" },
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "${workspaceFolder}/install/fast_calib/lib:/opt/ros/galactic/opt/yaml_cpp_vendor/lib:/opt/ros/galactic/opt/rviz_ogre_vendor/lib:/opt/ros/galactic/lib/x86_64-linux-gnu:/opt/ros/galactic/lib:${env:LD_LIBRARY_PATH}"
+                },
+                {
+                    "name": "PYTHONPATH",
+                    "value": "${workspaceFolder}/install/fast_calib/lib/python3.8/site-packages:/opt/ros/galactic/lib/python3.8/site-packages"
+                }
+            ],
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "multi_fast_calib (直接调试)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/fast_calib/multi_fast_calib",
+            "args": [
+                "--ros-args",
+                "-p", "output_path:=${workspaceFolder}/output"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "environment": [
+                { "name": "ROS_DISTRO", "value": "galactic" },
+                { "name": "ROS_VERSION", "value": "2" },
+                { "name": "ROS_PYTHON_VERSION", "value": "3" },
+                { "name": "RMW_IMPLEMENTATION", "value": "rmw_cyclonedds_cpp" },
+                { "name": "AMENT_PREFIX_PATH", "value": "${workspaceFolder}/install/fast_calib:/opt/ros/galactic" },
+                { "name": "CMAKE_PREFIX_PATH", "value": "${workspaceFolder}/install/fast_calib" },
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "${workspaceFolder}/install/fast_calib/lib:/opt/ros/galactic/opt/yaml_cpp_vendor/lib:/opt/ros/galactic/opt/rviz_ogre_vendor/lib:/opt/ros/galactic/lib/x86_64-linux-gnu:/opt/ros/galactic/lib:${env:LD_LIBRARY_PATH}"
+                },
+                {
+                    "name": "PYTHONPATH",
+                    "value": "${workspaceFolder}/install/fast_calib/lib/python3.8/site-packages:/opt/ros/galactic/lib/python3.8/site-packages"
+                }
+            ],
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

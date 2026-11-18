@@ -31,15 +31,15 @@ fast_calib:
   # p1: -0.000731746350601389
   # p2: -0.000201478932371979
 
-  # multi-scene
-    fx: 2478.48702288166
-    fy: 2478.58544825456
-    cx: 1230.99707596681
-    cy: 1025.66149498072
-    k1: -0.0493178189623200
-    k2: 0.147394487986097
-    p1: -0.00127118592043482
-    p2: -0.00200379689523022
+  # realsense D435 RGB @640x480 (按标称视场角估算的典型值，建议用 rs-enumerate-devices -c 读取真实内参替换)
+    fx: 612.0
+    fy: 612.0
+    cx: 320.0
+    cy: 240.0
+    k1: 0.0
+    k2: 0.0
+    p1: 0.0
+    p2: 0.0
 
 # Calibration target parameters
     marker_size: 0.20 # ArUco marker size (our test data uses 0.16m; adjust to match your marker size)
@@ -72,15 +72,17 @@ fast_calib:
   # z_min: 0.0
   # z_max: 2.0
 # multi_scene_33
-    x_min: 2.0
-    x_max: 5.0
-    y_min: -1.0
-    y_max: 4.0
-    z_min: 0.0
-    z_max: 2.0
+    x_min: 0.5
+    x_max: 3.5
+    y_min: -0.8
+    y_max: 0.8
+    z_min: -0.8
+    z_max: 1.5
 
 # Input
-    lidar_topic: "/livox/lidar" # /ouster/points /livox/lidar
+    # lidar_topic: "/livox/lidar" # /ouster/points /livox/lidar
+    lidar_topic: "/point_cloud_raw" # /ouster/points /livox/lidar
+    num_frames: 1 # 从 bag 中读取的点云帧数；1=只取第一帧（雷达相机支架抖动时推荐），N=累积前 N 帧
 
 # bag_path / image_path / output_path 由 launch 文件动态提供
 # （ROS2 参数文件不支持 $(find ...) 替换）

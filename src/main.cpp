@@ -38,6 +38,11 @@ int main(int argc, char **argv)
     qr_center_cloud->reserve(4);
     qrDetectPtr->detect_qr(img_input, qr_center_cloud);
 
+    // 保存 QR 圆心到本地 pcd（覆盖保存，便于 CloudCompare 查看）
+    pcl::io::savePCDFileBinary("output/qr_center_cloud.pcd", *qr_center_cloud);
+    std::cout << "[Main] Saved " << qr_center_cloud->size()
+              << " QR centers to output/qr_center_cloud.pcd" << std::endl;
+
     // 检测 LiDAR 数据
     PointCloud<PointXYZ>::Ptr lidar_center_cloud(new PointCloud<PointXYZ>);
     lidar_center_cloud->reserve(4);
@@ -68,6 +73,11 @@ int main(int argc, char **argv)
     // 保存中间结果：排序后的 LiDAR 圆心和 QR 圆心
     saveTargetHoleCenters(lidar_centers, qr_centers, params);
 
+    // 保存排序后的圆心点云为 pcd（便于 CloudCompare 查看）
+    pcl::io::savePCDFileBinary("output/lidar_centers.pcd", *lidar_centers);
+    pcl::io::savePCDFileBinary("output/qr_centers.pcd", *qr_centers);
+    std::cout << "[Main] Saved sorted centers to output/lidar_centers.pcd and output/qr_centers.pcd" << std::endl;
+
     // 计算外参
     Eigen::Matrix4f transformation;
     pcl::registration::TransformationEstimationSVD<pcl::PointXYZ, pcl::PointXYZ> svd;
@@ -77,6 +87,10 @@ int main(int argc, char **argv)
     pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_lidar_centers(new pcl::PointCloud<pcl::PointXYZ>);
     aligned_lidar_centers->reserve(lidar_centers->size());
     alignPointCloud(lidar_centers, aligned_lidar_centers, transformation);
+
+    // 保存外参变换后的 LiDAR 圆心点云为 pcd（便于 CloudCompare 查看）
+    pcl::io::savePCDFileBinary("output/aligned_lidar_centers.pcd", *aligned_lidar_centers);
+    std::cout << "[Main] Saved aligned LiDAR centers to output/aligned_lidar_centers.pcd" << std::endl;
     
     double rmse = computeRMSE(qr_centers, aligned_lidar_centers);
     if (rmse > 0) 
@@ -90,6 +104,15 @@ int main(int argc, char **argv)
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr colored_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     projectPointCloudToImage(cloud_input, transformation, qrDetectPtr->cameraMatrix_, qrDetectPtr->distCoeffs_, img_input, colored_cloud);
+
+    // 将标定板平面点云和边界点云投影到图像上并保存为叠加图（直观检查外参对齐效果）
+    {
+      std::string outputDir = params.output_path;
+      if (!outputDir.empty() && outputDir.back() != '/') outputDir += '/';
+      saveProjectedCloudImage(lidarDetectPtr->getPlaneCloud(), lidarDetectPtr->getEdgeCloud(),
+                              transformation, qrDetectPtr->cameraMatrix_, qrDetectPtr->distCoeffs_,
+                              img_input, outputDir + "projected_plane_cloud.png");
+    }
 
     saveCalibrationResults(params, transformation, colored_cloud, qrDetectPtr->imageCopy_);
 

@@ -43,7 +43,10 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
-set(CMAKE_BUILD_TYPE Release)
+# 仅当未显式指定时默认 Release，避免覆盖 -DCMAKE_BUILD_TYPE=Debug
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
@@ -82,6 +85,12 @@ target_link_libraries(multi_fast_calib
 install(TARGETS
   fast_calib
   multi_fast_calib
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# 辅助节点：订阅相机图像保存一帧（ros2 run fast_calib save_image_node.py）
+install(PROGRAMS
+  scripts/save_image_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
